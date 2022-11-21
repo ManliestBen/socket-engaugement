@@ -2,13 +2,43 @@
 import { app } from '../server.js'
 import debug from 'debug'
 import http from 'http'
+import { Server } from 'socket.io'
 
 // Get port from environment and store in Express
 const port = normalizePort(process.env.PORT || '3001')
 app.set('port', port)
 
 // Create HTTP server
+
 const server = http.createServer(app)
+const io = new Server(server, {
+  cors: {
+    origin: '*'
+  }
+})
+
+io.on('connection', socket => {
+  const users = []
+  for (let [id, socket] of io.of("/").sockets) {
+    users.push({
+      userID: id,
+    });
+  }
+  io.emit('update-users', users.length)
+  socket.on('emit-test', data => {
+    socket.broadcast.emit('send-msg', data.user)
+  })
+  socket.on('disconnect', () => {
+    let updatedUsers = []
+    for (let [id, socket] of io.of("/").sockets) {
+      updatedUsers.push({
+        userID: id,
+      });
+    }
+    io.emit('update-users', updatedUsers.length)
+  })
+})
+
 
 // Listen on provided port, on all network interfaces
 server.listen(port)
