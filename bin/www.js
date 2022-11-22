@@ -3,6 +3,7 @@ import { app } from '../server.js'
 import debug from 'debug'
 import http from 'http'
 import { Server } from 'socket.io'
+import axios from 'axios'
 
 // Get port from environment and store in Express
 const port = normalizePort(process.env.PORT || '3001')
@@ -21,12 +22,18 @@ io.on('connection', socket => {
   const users = []
   for (let [id, socket] of io.of("/").sockets) {
     users.push({
-      userID: id,
+      socketId: id,
     });
   }
+  
   io.emit('update-users', users.length)
-  socket.on('emit-test', data => {
-    socket.broadcast.emit('send-msg', data.user)
+  socket.on('declare-confusion', data => {
+    console.log(data.user)
+    axios.post(`http://localhost:${port}/api/flags/${data.user}`)
+    .then(response => {
+      console.log(response.data)  
+      socket.broadcast.emit('add-flag', response.data.createdAt)
+    })
   })
   socket.on('disconnect', () => {
     let updatedUsers = []
